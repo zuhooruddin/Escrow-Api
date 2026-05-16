@@ -5,7 +5,7 @@ const DEAL_STATUSES = ['PENDING', 'FUNDED', 'DELIVERED', 'COMPLETED', 'DISPUTED'
 
 const dealSchema = new mongoose.Schema({
   // ─── DEAL REFERENCE ──────────────────────────────────────────────────────
-  dealNumber: { type: String, unique: true }, // e.g. EPK-2026-00001
+  dealNumber: { type: String, unique: true }, // e.g. EPK-2024-00001
 
   // ─── PARTIES ─────────────────────────────────────────────────────────────
   buyer: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },

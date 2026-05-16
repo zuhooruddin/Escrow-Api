@@ -58,7 +58,7 @@ function baseTemplate(title, content, ctaText, ctaUrl) {
           <p style="margin:0;color:#94A3B8;font-size:12px;text-align:center;">
             Rakhwali PK — Pakistan's Trusted Escrow Platform<br>
             Questions? <a href="mailto:support@rakhwalipk.com" style="color:${BRAND.green};">support@rakhwalipk.com</a><br>
-            <span style="margin-top:8px;display:block;">© 2026 Rakhwali PK. All rights reserved.</span>
+            <span style="margin-top:8px;display:block;">© 2024 Rakhwali PK. All rights reserved.</span>
           </p>
         </td></tr>
       </table>

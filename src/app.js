@@ -20,16 +20,12 @@ const twofaRoutes = require('./routes/twofa.routes');
 
 const app = express();
 
-// ─── SECURITY MIDDLEWARE ────────────────────────────────────────────────────
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: 'cross-origin' },
-}));
-
+// ─── CORS (must be first — before helmet, rate limit, everything) ───────────
 const allowedOrigins = process.env.NODE_ENV === 'production'
   ? (process.env.FRONTEND_URL || '').split(',').map(o => o.trim()).filter(Boolean)
   : ['http://localhost:3000', 'http://localhost:3001'];
 
-app.use(cors({
+const corsOptions = {
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
     callback(new Error(`CORS: origin ${origin} not allowed`));
@@ -37,6 +33,14 @@ app.use(cors({
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // respond to all preflight requests immediately
+
+// ─── SECURITY MIDDLEWARE ────────────────────────────────────────────────────
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 
 // ─── GLOBAL RATE LIMIT ──────────────────────────────────────────────────────

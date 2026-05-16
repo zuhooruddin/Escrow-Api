@@ -3,6 +3,7 @@ const User = require('../models/User');
 const { AuditLog, Notification } = require('../models/AuditLog');
 const AppError = require('../utils/AppError');
 const notificationService = require('../services/notification.service');
+const emailService = require('../services/email.service');
 
 const AUTO_APPROVAL_DAYS = parseInt(process.env.AUTO_APPROVAL_DAYS || '5');
 
@@ -25,18 +26,18 @@ async function logStatusChange(deal, fromStatus, toStatus, triggeredBy, role, ac
 exports.createDeal = async (req, res) => {
   const { title, description, category, amountPKR, deadline, sellerEmail, tags } = req.body;
 
-  // Find seller
-  const seller = await User.findOne({ email: sellerEmail.toLowerCase().trim() });
-  if (!seller) throw new AppError('No user found with that email address.', 404);
-  if (seller._id.equals(req.user._id)) throw new AppError('You cannot create a deal with yourself.', 400);
-  if (!seller.isActive || seller.isSuspended) throw new AppError('This seller account is not available.', 400);
+  const normalizedSellerEmail = sellerEmail.toLowerCase().trim();
+  if (normalizedSellerEmail === req.user.email) throw new AppError('You cannot create a deal with yourself.', 400);
 
   const amountInPaisa = Math.round(parseFloat(amountPKR) * 100);
-  if (amountInPaisa < 100000) throw new AppError('Minimum deal amount is Rs. 1,000.', 400); // Rs. 1,000
+  if (amountInPaisa < 100000) throw new AppError('Minimum deal amount is Rs. 1,000.', 400);
 
-  const deal = await Deal.create({
+  // Seller may or may not be registered
+  const seller = await User.findOne({ email: normalizedSellerEmail });
+  if (seller && (!seller.isActive || seller.isSuspended)) throw new AppError('This seller account is not available.', 400);
+
+  const dealData = {
     buyer: req.user._id,
-    seller: seller._id,
     title: title.trim(),
     description: description.trim(),
     category: category || 'freelance',
@@ -44,20 +45,32 @@ exports.createDeal = async (req, res) => {
     deadline: new Date(deadline),
     tags: tags || [],
     status: 'PENDING',
-  });
+  };
 
+  if (seller) {
+    dealData.seller = seller._id;
+  } else {
+    dealData.sellerEmail = normalizedSellerEmail;
+  }
+
+  const deal = await Deal.create(dealData);
   await logStatusChange(deal, 'NEW', 'PENDING', req.user, 'buyer', 'Deal created by buyer', req);
 
-  // Notify seller
-  await notificationService.notify({
-    recipient: seller._id,
-    type: 'deal_created',
-    title: 'New Deal Invitation',
-    message: `${req.user.fullName} wants to escrow Rs. ${(amountInPaisa / 100).toLocaleString()} for "${title}". Review and accept or decline.`,
-    deal: deal._id,
-    emailData: { deal: await deal.populate(['buyer', 'seller']), seller },
-    smsData: { phone: seller.phone, dealTitle: title, amount: amountInPaisa / 100, dealNumber: deal.dealNumber },
-  });
+  if (seller) {
+    await notificationService.notify({
+      recipient: seller._id,
+      type: 'deal_created',
+      title: 'New Deal Invitation',
+      message: `${req.user.fullName} wants to escrow Rs. ${(amountInPaisa / 100).toLocaleString()} for "${title}". Review and accept or decline.`,
+      deal: deal._id,
+      emailData: { deal: await deal.populate(['buyer', 'seller']), seller },
+      smsData: { phone: seller.phone, dealTitle: title, amount: amountInPaisa / 100, dealNumber: deal.dealNumber },
+    });
+  } else {
+    // Seller not registered — send invite email
+    const populatedForEmail = await Deal.findById(deal._id).populate('buyer', 'fullName email');
+    await emailService.sendSellerInvite(normalizedSellerEmail, populatedForEmail, req.user);
+  }
 
   const populated = await Deal.findById(deal._id).populate('buyer', 'fullName email avatar').populate('seller', 'fullName email avatar');
   res.status(201).json({ success: true, message: 'Deal created successfully.', data: { deal: populated } });

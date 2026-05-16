@@ -9,7 +9,8 @@ const dealSchema = new mongoose.Schema({
 
   // ─── PARTIES ─────────────────────────────────────────────────────────────
   buyer: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  seller: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  seller: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  sellerEmail: { type: String, trim: true, lowercase: true }, // set when seller is not yet registered
 
   // ─── DEAL INFO ───────────────────────────────────────────────────────────
   title: { type: String, required: true, trim: true, maxlength: 200 },

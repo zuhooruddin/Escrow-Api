@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const User = require('../models/User');
+const Deal = require('../models/Deal');
 const AppError = require('../utils/AppError');
 const emailService = require('../services/email.service');
 const smsService = require('../services/sms.service');
@@ -45,6 +46,9 @@ exports.register = async (req, res) => {
     // Don't fail registration if email fails
     console.error('Email verification send failed:', err.message);
   }
+
+  // Link any pending deals where this email was the seller
+  await Deal.updateMany({ sellerEmail: email.toLowerCase().trim(), seller: null }, { seller: user._id, sellerEmail: undefined });
 
   const { accessToken, refreshToken } = generateTokens(String(user._id));
   await User.findByIdAndUpdate(user._id, { $push: { refreshTokens: refreshToken } });

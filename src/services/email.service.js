@@ -149,6 +149,27 @@ exports.sendDealCreated = async (seller, deal) => {
   });
 };
 
+exports.sendSellerInvite = async (sellerEmail, deal, buyer) => {
+  const registerUrl = `${process.env.FRONTEND_URL}/auth/register?email=${encodeURIComponent(sellerEmail)}`;
+  const amount = deal.amountInPaisa ? `Rs. ${(deal.amountInPaisa / 100).toLocaleString()}` : '';
+  await sendEmail({
+    to: sellerEmail,
+    subject: `${buyer.fullName} invited you to an escrow deal — ${deal.title}`,
+    html: baseTemplate(
+      'Deal Invitation',
+      `<h2 style="color:#0A1628;margin:0 0 8px;">You've been invited to an escrow deal</h2>
+       <p style="color:#374151;line-height:1.6;"><strong>${buyer.fullName}</strong> wants to use Rakhwali PK's secure escrow to pay you <strong style="color:#10B981;">${amount}</strong> for:</p>
+       <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:20px;margin:20px 0;">
+         <p style="margin:0;font-size:16px;font-weight:700;color:#0A1628;">${deal.title}</p>
+         <p style="margin:8px 0 0;color:#6B7280;font-size:13px;">${deal.description ? deal.description.slice(0, 200) + (deal.description.length > 200 ? '…' : '') : ''}</p>
+       </div>
+       <p style="color:#374151;line-height:1.6;">To accept or decline this deal, create your free Rakhwali PK account. It only takes a minute — your email is already pre-filled.</p>
+       <p style="color:#6B7280;font-size:13px;">Funds are held securely in escrow and only released to you once you deliver and the buyer approves.</p>`,
+      'Create Account & View Deal', registerUrl
+    ),
+  });
+};
+
 exports.sendDealFunded = async (seller, deal) => {
   const url = `${process.env.FRONTEND_URL}/dashboard/deals/${deal._id}`;
   await sendEmail({

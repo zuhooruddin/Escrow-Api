@@ -112,24 +112,27 @@ exports.getMyDeals = async (req, res) => {
 
 // ─── GET SINGLE DEAL ──────────────────────────────────────────────────────────
 exports.getDeal = async (req, res) => {
-  const deal = await Deal.findById(req.params.id)
-    .populate('buyer', 'fullName email avatar phone stats city')
-    .populate('seller', 'fullName email avatar phone stats city')
-    .populate('messages.sender', 'fullName avatar')
-    .populate('dispute.raisedBy', 'fullName')
-    .populate('dispute.verdictBy', 'fullName')
-    .populate('payment.ibftConfirmedBy', 'fullName')
-    .populate('payout.initiatedBy', 'fullName');
+  const [deal, auditLog] = await Promise.all([
+    Deal.findById(req.params.id)
+      .populate('buyer', 'fullName email avatar stats')
+      .populate('seller', 'fullName email avatar stats')
+      .populate('messages.sender', 'fullName avatar')
+      .populate('dispute.raisedBy', 'fullName')
+      .populate('dispute.verdictBy', 'fullName'),
+    AuditLog.find({ deal: req.params.id })
+      .populate('triggeredBy', 'fullName')
+      .sort({ timestamp: 1 })
+      .lean(),
+  ]);
 
   if (!deal) throw new AppError('Deal not found.', 404);
 
-  const isParty = deal.buyer._id.equals(req.user._id) || deal.seller._id.equals(req.user._id) || req.user.role === 'admin';
+  const buyerId = deal.buyer?._id;
+  const sellerId = deal.seller?._id;
+  const isParty = (buyerId && buyerId.equals(req.user._id)) ||
+                  (sellerId && sellerId.equals(req.user._id)) ||
+                  req.user.role === 'admin';
   if (!isParty) throw new AppError('Access denied.', 403);
-
-  // Get audit log
-  const auditLog = await AuditLog.find({ deal: deal._id })
-    .populate('triggeredBy', 'fullName')
-    .sort({ timestamp: 1 });
 
   res.json({ success: true, data: { deal, auditLog } });
 };

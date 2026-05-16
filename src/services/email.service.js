@@ -103,7 +103,7 @@ async function sendEmail({ to, subject, html }) {
 
 // ─── SPECIFIC EMAIL FUNCTIONS ─────────────────────────────────────────────────
 exports.sendEmailVerification = async (user, token) => {
-  const url = `${process.env.FRONTEND_URL}/auth/verify-email?token=${token}`;
+  const url = `${process.env.FRONTEND_URL}/auth/verify-email/${token}`;
   await sendEmail({
     to: user.email,
     subject: 'Verify your Rakhwali PK account',

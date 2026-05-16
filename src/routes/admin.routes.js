@@ -1,0 +1,18 @@
+const express = require('express');
+const adminController = require('../controllers/admin.controller');
+const { protect, adminOnly } = require('../middleware/auth');
+const router = express.Router();
+router.use(protect, adminOnly);
+router.get('/dashboard', adminController.getDashboard);
+router.get('/deals', adminController.getAllDeals);
+router.get('/deals/:id', adminController.getDealDetails);
+router.get('/disputes', adminController.getDisputes);
+router.get('/ibft-pending', adminController.getPendingIBFT);
+router.get('/kyc-queue', adminController.getKYCQueue);
+router.post('/kyc/review', adminController.reviewKYC);
+router.get('/users', adminController.getAllUsers);
+router.post('/users/toggle-suspend', adminController.toggleSuspend);
+router.post('/deals/flag', adminController.flagDeal);
+router.get('/revenue', adminController.getRevenueReport);
+router.post('/payouts/initiate', adminController.initiatePayout);
+module.exports = router;
